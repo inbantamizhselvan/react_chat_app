@@ -78,6 +78,7 @@
                     p{
                         background-color:  #0F5132;
                         border-radius: 20px;
+                        font-size: 14px;
                     }
                     .date{
                         text-align: left;
@@ -90,11 +91,12 @@
                 }
             }
             img{
-                width: 30px;
-                height: 30px;
-                border-radius: 50%;
+                width: 60px;
+                height: 60px;
+                border-radius: 10px;
                 object-fit: cover;
             }
+
             .texts{
                 flex: 1;
                 display: flex;
@@ -110,11 +112,26 @@
 
                 p{
                     padding: 16px;
-                    background-color: rgba(128, 128, 128, 0.614);
+                    background-color: rgba(128, 128, 128, 0.786);
                     border-radius: 20px;
+                    font-size: 14px;
                 }
                 .date{
                     text-align: left;
+                }
+                .messageDelete{
+                    max-width: 50%;
+                    padding: 10px;
+                    border-radius: 10px;
+                    border: none;
+                    outline: none;
+                    background-color: rgba(66, 251, 4, 0.4);
+                    font-weight: 600;
+                    cursor:pointer;
+                    &:hover{
+                        background-color: rgba(66, 251, 4, 0.792);
+                        color:red;
+                    }
                 }
                 span{
                     text-align: right;
@@ -136,7 +153,6 @@
         .icons{
             display: flex;
             gap: 20px;
-
         }
         img{
             width: 20px;
@@ -184,68 +200,4 @@
     }
     }
 
-    .video {
-        width: max-content;
-        height: max-content;
-        padding: 20px;
-        position: absolute;
-        background-color: rgba(12, 50, 24, 0.784);
-        border-radius: 20px;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        margin: auto;
-    }
-    
-    .video .items {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .video .items img {
-        height: 60px;
-        width: 60px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-    
-    .video .items h3 { /* Changed h2 to h3 to match your JSX */
-    }
-    
-    .video .bottom p {
-        font-size: 18px;
-        color: greenyellow;
-        animation: blink-animation 1s infinite; /* Applied the blink animation directly here */
-    }
-    
-    @keyframes blink-animation {
-        0% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0;
-        }
-        100% {
-            opacity: 1;
-        }
-    }
-    
-    .video .bottom button {
-        width: 60px;
-        height: 40px;
-        border-radius: 40px;
-        background-color: red;
-        border: none;
-        outline: none;
-        cursor: pointer;
-    }
-    .video .video-call{
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        height: 500px;
-        width: 500px;
-    }
     

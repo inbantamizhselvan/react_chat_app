@@ -1,10 +1,11 @@
-import { arrayUnion, collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+import { arrayUnion, collection, doc,  getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import './addUser.css';
-import { auth, db } from '../../../../lib/firebase';
+import { db } from '../../../../lib/firebase';
 import { useState } from 'react';
 import { useUserStore } from '../../../../lib/userStore';
 import Search from "../../../../assets/search.png";
 import Avatar from "../../../../assets/avatar.png";
+import { toast } from 'react-toastify';
 
 function AddUser(){
   const [user, setUser] = useState(null);
@@ -14,7 +15,9 @@ function AddUser(){
     e.preventDefault();
     const formData = new FormData(e.target);
     const username = formData.get("username");
-
+    if(username === currentUser.username){
+      toast.warn("You can't add yourself!");
+    }else {
     try{
       const userRef = collection(db,"users");
       const q = query(userRef, where("username", "==", username));
@@ -24,10 +27,10 @@ function AddUser(){
       if(!querySnapShot.empty){
         setUser(querySnapShot.docs[0].data());
       }
-
     }catch(err){
       console.log(err);
     }
+  }
   }
 
   const handleAdd = async() => {

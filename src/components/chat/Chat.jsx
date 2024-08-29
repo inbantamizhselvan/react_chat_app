@@ -1,37 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import './chat.css';
 import EmojiPicker from 'emoji-picker-react';
-import { addDoc, arrayUnion, collection, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { arrayUnion, doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useChatStore } from '../../lib/chatStore';
 import { useUserStore } from '../../lib/userStore';
 import upload from '../../lib/upload';
-import Audio from './audio/Audio';
-import uploadAudio from '../../lib/uploadAudio';
-import AudioPlayer from 'react-h5-audio-player';
 import 'react-h5-audio-player/lib/styles.css';
 import ImagePic from "../../assets/img.png";
 import AvatarImg from "../../assets/avatar.png";
-import PhoneImg from "../../assets/phone.png";
-import StopVideo from "../../assets/stopVideo.png";
-import VideoImg from "../../assets/video.png";
-import DialTone from "../../assets/dial-tone.mp3";
-import EndPhoneImg from "../../assets/endPhone.png";
 import MicImg from "../../assets/mic.png";
 import EmojiImg from "../../assets/emoji.png";
+import locationImg from "../../assets/pin-img.png"
+import useLocationTracking from '../../lib/useLocationTracking';
+import { toast } from 'react-toastify';
+import { v4 as uuidv4 } from 'uuid';
+
 
 function Chat(){
     const [chat, setChat] = useState();
-    const [call, setCall] = useState(true);
-    const audioRef = useRef(null);
-    const videoRef = useRef(null);
-    const localRef = useRef(null);
-    const remoteRef = useRef(null);
-    const [callState, setCallState] = useState("");
     const [open, setOpen] = useState(false);
     const [text, setText] = useState("");
-    const [video, setVideo] = useState(false);
-    const [audioCall, setAudioCall] = useState(false);
+    const [sendLocation, setSendLocation] = useState(false);
+    const [selectedMessage, setSelectedMessage] = useState();
+    const [messageClick, setMessageClick] = useState(false);
     const [image, setImage] = useState({
         file: null,
         url: "",
@@ -39,6 +31,7 @@ function Chat(){
 
     const {currentUser} = useUserStore();
     const {chatId, user, isCurrentUserBlocked, isReceiverBlocked} = useChatStore();
+    const {location} = useLocationTracking(currentUser?.id);
     console.log(user);
 
     const endRef = useRef(null);
@@ -55,28 +48,55 @@ function Chat(){
             unSub();
         };
     }, [chatId]);
-    useEffect(() => {
-        if (audioRef.current) {
-            if (video) {
-                audioRef.current.play();
-            } else {
-                audioRef.current.pause();
-                audioRef.current.currentTime = 0;
-            }
-        }
-    }, [video]);
     const handleEmoji = e => {
         setText((prev)=>prev+e.emoji);
         setOpen(false);
     };
-    function handleVideo(){
-        setVideo(!video);
-        if(!video){
-        initializeCall();
+    const generateLocationURL = (latitude, longitude) => {
+        return `https://www.google.com/maps?q=${latitude}%2C${longitude}`;
+    };
+
+    const handleClick = (message) =>{
+        setMessageClick((prev)=>!prev);
+        setSelectedMessage(message?.id);
+        console.log(message?.id);
+    }
+
+    const handleDelete = async() => {
+        console.log(selectedMessage);
+        setMessageClick(false);
+        if(!selectedMessage) return;
+        try{
+            const chatRef = doc(db, "chats", chatId);
+            const chatDoc = await getDoc(chatRef);
+            if (chatDoc.exists()) {
+                const chatData = chatDoc.data();
+                const updatedMessages = chatData.messages.filter((msg) => msg.id !== selectedMessage);
+                await updateDoc(chatRef, {
+                    messages: updatedMessages,
+                });
+            }
+        }catch(error){
+            console.log(error);
+        }
+    };
+
+
+    const handleLocation = () => {
+        if(location){
+        console.log(location);
+        const { latitude, longitude } = location;
+        const locationURL = generateLocationURL(latitude, longitude);
+        const linkHTML = `<a href="${locationURL}" target="_blank" rel="noopener noreferrer"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pin-map" viewBox="0 0 16 16">
+  <path fill-rule="evenodd" d="M3.1 11.2a.5.5 0 0 1 .4-.2H6a.5.5 0 0 1 0 1H3.75L1.5 15h13l-2.25-3H10a.5.5 0 0 1 0-1h2.5a.5.5 0 0 1 .4.2l3 4a.5.5 0 0 1-.4.8H.5a.5.5 0 0 1-.4-.8z"/>
+  <path fill-rule="evenodd" d="M8 1a3 3 0 1 0 0 6 3 3 0 0 0 0-6M4 4a4 4 0 1 1 4.5 3.969V13.5a.5.5 0 0 1-1 0V7.97A4 4 0 0 1 4 3.999z"/>
+</svg> View Location</a>`;
+        setText(((prev)=> prev+`${linkHTML}`));
+        setSendLocation(true);
+        }else{
+            toast.error("Turn on your Location! and try again.");
         }
     }
-    
-    const handleAudioCall = () => setAudioCall(!audioCall);
 
     const handleImage = e => {
         if(e.target.files[0]){
@@ -86,39 +106,6 @@ function Chat(){
             });
         }
     };
-
-    const initializeCall = async () => {
-        const servers = {
-            iceServers: [
-                {
-                    urls: [
-                        "stun:stun1.l.google.com:19302",
-                        "stun:stun2.l.google.com:19302",
-                    ],
-                },
-            ],
-            iceCandidatePoolSize: 10,
-          };
-          
-          const pc = new RTCPeerConnection(servers);
-        const localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-        });
-        const remoteStream = new MediaStream();
-        localStream.getTracks().forEach((track) => {
-            pc.addTrack(track, localStream);
-        });
-        pc.ontrack = (event) => {
-            event.streams[0].getTracks().forEach((track) => {
-                remoteStream.addTrack(track);
-            });
-        };
-        localRef.current.srcObject = localStream;
-        remoteRef.current.srcObject = remoteStream;
-
-
-    }
 
 
     const formatDate = (date) => {
@@ -145,6 +132,7 @@ function Chat(){
         if(text === "") return;
 
         let imgUrl= null;
+        const messageId = uuidv4();
 
         try{
             if(image.url){
@@ -158,6 +146,7 @@ function Chat(){
         try{
             await updateDoc(doc(db,"chats", chatId), {
                 messages: arrayUnion({
+                    id: messageId,
                     senderId: currentUser.id,
                     text,
                     createdAt: new Date(),
@@ -175,14 +164,14 @@ function Chat(){
                 const userChatsData = userChatsSnapshot.data();
 
                 const chatIndex = userChatsData.chats.findIndex(c => c.chatId === chatId);
-                userChatsData.chats[chatIndex].lastMessage = text.slice(0, 50);
+                userChatsData.chats[chatIndex].lastMessage = sendLocation?"Location":text.slice(0, 50);
                 userChatsData.chats[chatIndex].isSeen = currentUser.id === id? true:false;
                 userChatsData.chats[chatIndex].updatedAt = Date.now();
-
                 await updateDoc(userChatsRef, {
                     chats: userChatsData.chats,
                 });
             }
+            setSendLocation(false);
         });
         } catch(err){
             console.log(err);
@@ -201,12 +190,8 @@ function Chat(){
                 <img src={isCurrentUserBlocked|| isReceiverBlocked?AvatarImg:user.avatar||AvatarImg} alt="" />
                 <div className="texts">
                     <span>{isCurrentUserBlocked || isReceiverBlocked?"User":user.username}</span>
-                    <p style={{color:"limegreen"}} disabled={isCurrentUserBlocked||isReceiverBlocked?true:false}>{currentUser.about}</p>
+                    <p style={{color:"limegreen"}} disabled={isCurrentUserBlocked||isReceiverBlocked?true:false}>{user?.about}</p>
                 </div>
-            </div>
-            <div className="icons">
-                <img src={PhoneImg} alt="" onClick={handleAudioCall}/>
-                <img src={video?StopVideo:VideoImg} alt=""  onClick={handleVideo}/>
             </div>
             </div>
             <div className="center" style={{backgroundImage:`url("${currentUser?.bgImg || "none"}")`,
@@ -215,13 +200,17 @@ function Chat(){
                                             objectFit: 'cover',
                                             backgroundRepeat:"no-repeat"}}>
                 {chat?.messages?.map((message) => (
-                <div className={message.senderId === currentUser?.id?"message own":"message"} key={message?.createdAt}>
-                    <div className="texts">
+                <div className={message.senderId === currentUser?.id?"message own":"message"} key={message?.createdAt} onClick={()=>handleClick(message)}>
+                    <div className="texts" >
                         <div className="date">
                         <span>{formatDate(message.createdAt.toDate())}</span>
                         </div>
-                        {message.img && <img src={message.img} alt="" />}
-                        <p>{message.text}</p>
+                        {message.img && 
+                            <img src={message.img} alt="" />}
+                        <p dangerouslySetInnerHTML={{ __html: message.text }} />
+                        {messageClick && message?.senderId===currentUser?.id && selectedMessage === message?.id && (
+                                <button onClick={handleDelete} className='messageDelete'>Delete</button>
+                            )}
                         <span>{formatTime(message.createdAt.toDate())}</span>
                     </div>
                 </div>
@@ -231,41 +220,16 @@ function Chat(){
                         <img src={image.url} alt="" />
                     </div>
                 </div>}
-                {audioCall && <Audio setAudio={setAudioCall} username={user?.username} avatar={user?.avatar}/>}
-                {video && 
-                            <div className='video'>
-                            <audio
-                                ref={audioRef}
-                                src={DialTone} 
-                                loop
-                            ></audio>
-                                
-                                <div className="items">
-                                    <img src={user?.avatar || AvatarImg} alt="Avatar" />
-                                    <p>{user.username}</p>
-                                </div>
-                                <div className="video-call">
-                                    {console.log(videoRef)}
-                                    <video ref={localRef} autoPlay playsInline />
-                                    <video ref={remoteRef} autoPlay playsInline />
-                                </div>
-                                <div className="bottom">
-                                    <p className='blink'>ringing...</p>
-                                    <button onClick={() => setVideo(false)}>
-                                        <img src={EndPhoneImg} alt="End Call" />
-                                    </button>
-                                </div>
-                            </div>
-                }
                 <div ref={endRef}></div>
             </div>
             <div className="bottom">
                 <div className="icons">
                     <label htmlFor="file"><img src={ImagePic} alt=""/></label>
                     <input type="file" id="file" style={{display:"none"}} onChange={handleImage}/>
-                    <div className="mic" /*onMouseDown={handleMicPress} onMouseUp={handleMicRelease}*/> 
+                    <div className="mic"> 
                     <img src={MicImg} alt="" />
                     </div>
+                    <img src={locationImg} alt="" onClick={handleLocation}/>
                 </div>
                     <input type="text" placeholder={isCurrentUserBlocked || isReceiverBlocked?"You cannot send a message!":"Type a message ...."} value={text} onChange={e=>setText(e.target.value)} disabled={isCurrentUserBlocked || isReceiverBlocked}/>
                     <div className="emoji">

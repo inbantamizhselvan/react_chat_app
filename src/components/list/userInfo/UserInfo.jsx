@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUserStore } from '../../../lib/userStore';
 import './userInfo.css';
 import upload from '../../../lib/upload';
-import { collection, doc, getDocs, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, query, setDoc, where } from 'firebase/firestore';
 import { auth, db } from '../../../lib/firebase';
 import Avatar from "../../../assets/avatar.png";
 import ClickedEdit from "../../../assets/clickedEdit.png";
@@ -85,9 +85,6 @@ function UserInfo() {
     }
       const imgUrl = avatar.file ? await upload(avatar.file) : currentUser.avatar;
       const bgUrl = removeBg?"null":bgImg.file ? await upload(bgImg.file) : currentUser.bgImg; 
-      if(removeBg){
-        setRemoveBg(false);
-      } // Change #3: Consider bgImg state
       await setDoc(doc(db, "users", currentUser?.id), {
         username,
         avatar: imgUrl,
@@ -97,7 +94,8 @@ function UserInfo() {
         id: currentUser.id,
         blocked: [],
       });
-      if(cancel){
+      if(cancel || removeBg){
+      setRemoveBg(false);
       window.location.reload();
       }
     } catch (err) {
@@ -128,11 +126,11 @@ function UserInfo() {
             <input type="file" id="file" style={{ display: "none" }} onChange={handleAvatar} />
             <div className="username">
               <h3>Username:</h3>
-              <input type="text" placeholder='Enter your Username' name='username' value={username} onChange={(e) => setUsername(e.target.value)} />
+              <input type="text" placeholder='Enter your Username' name='username' maxLength="16" value={username} onChange={(e) => setUsername(e.target.value)} />
             </div>
             <div className="about">
               <h3>About:</h3>
-              <input type="text" placeholder='About Yourself' name='about' value={about} onChange={(e) => setAbout(e.target.value)} />
+              <input type="text" placeholder='About Yourself' name='about' maxLength="50" value={about} onChange={(e) => setAbout(e.target.value)} />
             </div>
             <label htmlFor="background">
               <img src={bgImg.url || currentUser?.bgImg} alt="" /> Change Background
@@ -141,7 +139,7 @@ function UserInfo() {
             <input type="file" id="background" style={{ display: "none" }} onChange={handleBg} />
             <div className="submitButton">
               <button type='submit'>Apply Changes</button>
-              <button style={{ backgroundColor: "red" }} onClick={() => auth.signOut()}>Sign Out</button>
+              <button style={{ backgroundColor: "red"}} onClick={() => auth.signOut()}>Sign Out</button>
               <button style={{ backgroundColor: removeBg?"black":"Silver" }} onClick={handleRemoveBackground}>{removeBg?"Click on Apply changes":"Remove Background"}</button>
             </div>
           </div>

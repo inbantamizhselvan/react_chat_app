@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import './chatList.css';
 import AddUser from './addUser/AddUser';
 import { useUserStore } from '../../../lib/userStore';
-import { doc, getDoc, onSnapshot, onSnapshotsInSync, updateDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from '../../../lib/firebase';
 import { useChatStore } from '../../../lib/chatStore';
 import Avatar from "../../../assets/avatar.png";
@@ -14,9 +14,8 @@ function ChatList(){
     const [chats, setChats] = useState([]);
     const [addMode, setAddMode] = useState(false);
     const [input, setInput] = useState("");
-
     const {currentUser} = useUserStore();
-    const {chatId, changeChat} =useChatStore();
+    const {changeChat} =useChatStore();
     console.log(currentUser.id);
 
     useEffect(() => {
@@ -25,7 +24,6 @@ function ChatList(){
             console.log(res);
             console.log(res.data());
             const items = res.data().chats;
-            // const items = data.chats;
             const promises = items.map( async(item) => {
                 const userDocRef = doc(db, "users", item.recieverId);
                 const userDocSnap = await getDoc(userDocRef);
@@ -69,7 +67,7 @@ function ChatList(){
         <div className="search">
             <div className="searchBar">
                 <img src={Search} alt="" />
-                <input type="text" placeholder='Search' onChange={(e)=>(e.target.value)}/>
+                <input type="text" placeholder='Search' onChange={(e)=>setInput(e.target.value)}/>
             </div>
             <img src={addMode ? Minus : Plus} alt="" className='add' onClick={() => setAddMode((prev) => !prev)}/>
         </div>
